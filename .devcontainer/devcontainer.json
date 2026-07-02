@@ -1,0 +1,23 @@
+{
+    "name": "openvla-container",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "gpu-service",
+    "workspaceFolder": "/openvla",
+    "shutdownAction": "stopCompose",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "cschlosser.doxdocgen",
+                "augustocdias.tasks-shell-input",
+                "ms-python.python",
+                "njpwerner.autodocstring",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.jupyter",
+                "ms-toolsai.vscode-jupyter-slideshow"
+            ]
+        },
+        "jetbrains": {
+            "extensions": []
+        }
+    }
+}
