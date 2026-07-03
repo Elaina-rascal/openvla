@@ -36,11 +36,13 @@ def load_local_4bit_model():
     model = AutoModelForVision2Seq.from_pretrained(
         MODEL_PATH,
         quantization_config=bnb_config,
+        torch_dtype=torch.bfloat16,
         device_map="cuda:0",  # 必须写死显卡号，绝不能写 "auto" 或 {"": 0}
         trust_remote_code=True
         # 不要加 low_cpu_mem_usage，否则也会触发内部检测
     )
-
+    if hasattr(model, "language_model"):
+        print(model.language_model.model.layers[0].self_attn.q_proj)
     return model, processor
 
 
@@ -56,21 +58,21 @@ def predict_action(model, processor, image: Image.Image, instruction: str):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image", default=None)
     parser.add_argument("--instruction", default="pick up the red cube")
     args = parser.parse_args()
 
     model, processor = load_local_4bit_model()
-
-    if args.image:
-        image = Image.open(args.image).convert("RGB")
-    else:
-        image = Image.fromarray(np.random.randint(0, 255, (256, 256, 3), dtype=np.uint8))
-
-    t0 = time.time()
-    action = predict_action(model, processor, image, args.instruction)
-    print("action:", action)
-    print(f"latency: {time.time() - t0:.3f}s")
+    image=Image.open('test.jpg').convert("RGB")
+    instruction= "把鼠标挪到键盘旁边"
+    # if args.image:
+        # image = Image.open(args.image).convert("RGB")
+    # else:
+        # image = Image.fromarray(np.random.randint(0, 255, (256, 256, 3), dtype=np.uint8))
+    for i in range(5):
+        t0 = time.time()
+        action = predict_action(model, processor, image, instruction)
+        print("action:", action)
+        print(f"latency: {time.time() - t0:.3f}s")
 
 
 if __name__ == "__main__":
