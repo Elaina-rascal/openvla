@@ -13,7 +13,8 @@
                 "njpwerner.autodocstring",
                 "ms-python.vscode-pylance",
                 "ms-toolsai.jupyter",
-                "ms-toolsai.vscode-jupyter-slideshow"
+                "ms-toolsai.vscode-jupyter-slideshow",
+                "Vizards.deepseek-v4-for-copilot"
             ]
         },
         "jetbrains": {

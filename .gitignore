@@ -1,3 +1,4 @@
 data/
 *.pyc
 *.pth
+openvla-7b/

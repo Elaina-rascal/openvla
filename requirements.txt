@@ -1,0 +1,10 @@
+# OpenVLA 最简推理 - 依赖
+# Docker 环境已预装，仅作记录
+
+torch>=2.1.0
+transformers>=4.40.0
+accelerate>=0.28.0
+Pillow>=10.0.0
+numpy<2.0                    # torch 2.2 需要 numpy 1.x
+matplotlib>=3.7.0
+tqdm>=4.65.0
