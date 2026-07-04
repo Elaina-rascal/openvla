@@ -71,6 +71,7 @@ def vla_worker(model, proc, img_queue, action_queue, instruction):
         if img is None:  # 结束信号
             break
         raw = predict_vla(model, proc, img, instruction)
+        raw[3:6] = 0.0  # 只用平移 + 抓取，不用旋转
         # 清空旧动作，只保留最新
         while not action_queue.empty():
             action_queue.get_nowait()
@@ -94,8 +95,9 @@ def main():
 
     # 初始位姿 —— 让机械臂伸展到视野中央，看得清动作
     init_q = np.array([0.5, -0.4, 0.3, -1.6, 0.0, 1.2, 0.5])
-    mj_data.qpos[:7] = init_q
-    mj_data.ctrl[:7] = init_q
+
+    mj_data.qpos[:N_ARM_JOINTS] = init_q
+    mj_data.ctrl[:N_ARM_JOINTS] = init_q
     mujoco.mj_forward(mj_model, mj_data)
     print(f"[MuJoCo] EE: ({mj_data.body(ee_body_id).xpos[0]:.3f}, "
           f"{mj_data.body(ee_body_id).xpos[1]:.3f}, {mj_data.body(ee_body_id).xpos[2]:.3f})")
@@ -116,11 +118,19 @@ def main():
     # ── Viewer + Renderer ──
     renderer = mujoco.Renderer(mj_model, 224, 224)
     viewer = mujoco.viewer.launch_passive(mj_model, mj_data)
+    prev_time = mj_data.time
+    target_pos = mj_data.body(ee_body_id).xpos.copy()
     try:
         while viewer.is_running():
+            # 监听 viewer reset：当仿真时间回跳时，重置机械臂到自定义初始位姿。
+            if mj_data.time < prev_time:
+                mj_data.qpos[:N_ARM_JOINTS] = init_q
+                mj_data.ctrl[:N_ARM_JOINTS] = init_q
+                mujoco.mj_forward(mj_model, mj_data)
+                target_pos = mj_data.body(ee_body_id).xpos.copy()
             mujoco.mj_forward(mj_model, mj_data)
             ee_pos = mj_data.body(ee_body_id).xpos.copy()
-
+            
             # ── 渲染（主线程）──
             renderer.update_scene(mj_data, camera=cam_id)
             img = renderer.render()
@@ -131,19 +141,22 @@ def main():
                     img_queue.put_nowait(img)
                 if not action_queue.empty():
                     latest_action = action_queue.get_nowait()
+                elif action_queue.empty():
+                    latest_action = np.zeros(7)
                 delta = latest_action[:3]
                 grip = latest_action[6]
             else:
                 delta = np.zeros(3)
 
             # ── 目标 = 当前 + VLA delta ──
-            target_pos = ee_pos + delta
+            target_pos = target_pos + delta
 
             # IK → 执行
             q_target = solve_ik(mj_model, mj_data, ee_body_id, target_pos, n_arm_joints=N_ARM_JOINTS)
             mj_data.ctrl[:N_ARM_JOINTS] = q_target
 
             mujoco.mj_step(mj_model, mj_data)
+            prev_time = mj_data.time
             viewer.sync()
 
     except KeyboardInterrupt:
